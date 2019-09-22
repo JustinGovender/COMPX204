@@ -52,7 +52,6 @@ public class MyTLSFileServer {
 }
 
 class MyTLSFileServerSession implements Runnable {
-    private BufferedOutputStream writer;
     //Datafields ##########################################
     private Socket socket;
     private BufferedReader reader;
@@ -63,7 +62,6 @@ class MyTLSFileServerSession implements Runnable {
         try {
             socket = s;
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new BufferedOutputStream(socket.getOutputStream());
         } catch (Exception ex) {
             System.err.println(ex.getMessage());
         }
@@ -74,32 +72,13 @@ class MyTLSFileServerSession implements Runnable {
     public void run() {
         try {
             //Declare variables
-            String line;
-            String[] parts;
-            String filename = "";
+            String filename;
             //Readline to starts TLS handshake
             reader.readLine();
-            //If there is input from the client
-            if ((line = reader.readLine()) != null) {
-                //parts = line.split(" ");
-                //If it is a valid request print out the requested file
-                //if (parts.length == 3 && parts[0].equals("GET")) {
-                    filename = line;
-                    System.out.println("requesting file: " + filename);
-                //}
-//                //Go through the remaining parts of the HTTP request
-//                while (true) {
-//                    line = reader.readLine();
-//                    //If there is an error close the connection
-//                    if (line == null) {
-//                        socket.close();
-//                        //If we have reached the end break out of the loop
-//                    } else if (line.equals("")) {
-//                        break;
-//                    }
-//                }
-                writeFile(filename);
-            }
+
+            filename = reader.readLine();
+            System.out.println(filename);
+            writeFile("/home/jmg66/Documents/COMPX204/COMPX204/" + filename);
             //Close connection
             socket.close();
 
@@ -108,26 +87,14 @@ class MyTLSFileServerSession implements Runnable {
         }
     }
 
-    //Sends a string to the client
-    private void writeln(String s) throws IOException {
-        //Adds new line characters necessary for HTTP protocol
-        String line = (s + "\r\n");
-        //Send as a byte stream
-        byte[] array = line.getBytes();
-        for (byte b : array) {
-            writer.write(b);
-        }
-        writer.flush();
-    }
-
     //Sends a file to the client
     private void writeFile(String filename) {
 
         try {
             //Declare objects
             byte[] buffer = new byte[1024];
-            //Looks for a file on the desktop
-            File file = new File("/Users/justin/Desktop/" + filename);
+            //Looks for the file
+            File file = new File(filename);
             BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream());
             FileInputStream reader = new FileInputStream(file);
 

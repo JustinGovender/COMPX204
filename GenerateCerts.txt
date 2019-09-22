@@ -1,0 +1,10 @@
+#!/bin/bash
+
+openssl req -new -x509 -keyout ca-private.pem -out ca-cert.pem -days 3650
+keytool -import -trustcacerts -alias root -file ca-cert.pem -keystore ca-cert.jks
+keytool -genkeypair -alias cms-r1-17.cms.waikato.ac.nz -keyalg RSA -keystore server.jks
+keytool -certreq -alias cms-r1-17.cms.waikato.ac.nz -file server.csr -keystore server.jks
+openssl x509 -req -in server.csr -CA ca-cert.pem -CAkey ca-private.pem -CAcreateserial -out server-cert.pem
+keytool -import -trustcacerts -alias root -file ca-cert.pem -keystore server.jks
+keytool -import -alias cms-r1-17.cms.waikato.ac.nz -file server-cert.pem -keystore server.jks
+

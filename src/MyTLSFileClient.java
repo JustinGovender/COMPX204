@@ -42,7 +42,7 @@ public class MyTLSFileClient {
     private FileOutputStream writer;
     private InputStream reader;
     private Socket socket;
-    private final String pathName = "/Users/justin/Desktop/";
+    private final String pathName = "/home/jmg66/Documents/COMPX204/COMPX204/";
 
     //Constructor #########################################
     public MyTLSFileClient(Socket s) throws IOException{
@@ -54,17 +54,15 @@ public class MyTLSFileClient {
     //Methods #############################################
     private void GetFile(String filename) throws IOException {
         //Declare objects
-        File file = new File(pathName + "_" + filename);
-        writer = new FileOutputStream(file);
+        writer = new FileOutputStream(pathName + "_" + filename);
         reader = socket.getInputStream();
-        String line;
         byte[] buffer = new byte[1024];//16KiB
 
-        //Send HTTP Request to server
-        writeln(filename);
+        //Send hi line to complete handshake
+        writeln("hi\n");
+        //Send requested filename
+        writeln(filename + "\n");
 
-        //writeln("GET /" +filename+  " HTTP/1.1");
-        //writeln("");
 
         //Read a chunk of the file
         int length = reader.read(buffer);
@@ -84,8 +82,7 @@ public class MyTLSFileClient {
 
     //Sends a string to the server
     private void writeln(String s) throws IOException {
-        //Adds new line characters necessary for HTTP protocol
-        //String line = (s + "\r\n");
+        String line = (s);
         //Send as a byte stream
         byte[] array = s.getBytes();
         for (byte b : array) {
