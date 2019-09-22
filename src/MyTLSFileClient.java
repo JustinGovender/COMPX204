@@ -1,4 +1,7 @@
 
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.*;
 
@@ -15,7 +18,15 @@ public class MyTLSFileClient {
         }
         try{
             //Create socket
-            Socket socket = new Socket(args[0], Integer.parseInt(args[1]));
+            SSLSocketFactory factory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+            SSLSocket socket = (SSLSocket)factory.createSocket(args[0], Integer.parseInt(args[1]));
+            //Hostname validation
+            SSLParameters parameters = new SSLParameters();
+            parameters.setEndpointIdentificationAlgorithm("HTTPS");
+            socket.setSSLParameters(parameters);
+
+            //Start secure transmission
+            socket.startHandshake();
             //Create client
             MyTLSFileClient client = new MyTLSFileClient(socket);
             //Get file from server
@@ -47,15 +58,16 @@ public class MyTLSFileClient {
         writer = new FileOutputStream(file);
         reader = socket.getInputStream();
         String line;
-        byte[] buffer = new byte[16384];//16KiB
-        int length = 0;
+        byte[] buffer = new byte[1024];//16KiB
 
         //Send HTTP Request to server
-        writeln("GET /" +filename+  " HTTP/1.1");
-        writeln("");
+        writeln(filename);
+
+        //writeln("GET /" +filename+  " HTTP/1.1");
+        //writeln("");
 
         //Read a chunk of the file
-        length = reader.read(buffer);
+        int length = reader.read(buffer);
         //While not at the end of the file...
         while (length != -1) {
             writer.write(buffer, 0, length);
@@ -73,9 +85,9 @@ public class MyTLSFileClient {
     //Sends a string to the server
     private void writeln(String s) throws IOException {
         //Adds new line characters necessary for HTTP protocol
-        String line = (s + "\r\n");
+        //String line = (s + "\r\n");
         //Send as a byte stream
-        byte[] array = line.getBytes();
+        byte[] array = s.getBytes();
         for (byte b : array) {
             serverWriter.write(b);
         }

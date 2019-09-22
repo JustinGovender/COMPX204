@@ -1,6 +1,12 @@
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyStore;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -13,14 +19,29 @@ public class MyTLSFileServer {
             System.exit(0);
         }
         try{
-            ServerSocket server = new ServerSocket(Integer.parseInt(args[0]));
+            //Set up Keystore
+            KeyStore ks = KeyStore.getInstance("JKS");
+            char[] password = "password".toCharArray();
+            ks.load(new FileInputStream("server.jks"), password);
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks,password);
+            //Set up SSL
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(kmf.getKeyManagers(), null, null);
+            //Create factory
+            ServerSocketFactory ssf = ctx.getServerSocketFactory();
+            //Create SSL server socket
+            SSLServerSocket sserverSocket = (SSLServerSocket) ssf.createServerSocket(Integer.parseInt(args[0]));
+            sserverSocket.setEnabledProtocols(new String[]{"TLSv1.2", "TLSv1.1"});
             //write server info to console
-            System.out.println("Web server starting! Running on port " + server.getLocalPort());
+            System.out.println("Web server starting! Running on port " + sserverSocket.getLocalPort());
+
             //Infinite loop
             while(true){
-                Socket client = server.accept();
-                System.out.println("New connection! " + client.getLocalAddress());
-                MyTLSFileServerSession task = new MyTLSFileServerSession(client);
+
+                SSLSocket sclient = (SSLSocket) sserverSocket.accept();
+                System.out.println("New connection! " + sclient.getLocalAddress());
+                MyTLSFileServerSession task = new MyTLSFileServerSession(sclient);
                 exec.execute(task);
             }
 
@@ -56,25 +77,27 @@ class MyTLSFileServerSession implements Runnable {
             String line;
             String[] parts;
             String filename = "";
+            //Readline to starts TLS handshake
+            reader.readLine();
             //If there is input from the client
             if ((line = reader.readLine()) != null) {
-                parts = line.split(" ");
+                //parts = line.split(" ");
                 //If it is a valid request print out the requested file
-                if (parts.length == 3 && parts[0].equals("GET")) {
-                    filename = parts[1].substring(1);
-                    System.out.println(filename);
-                }
-                //Go through the remaining parts of the HTTP request
-                while (true) {
-                    line = reader.readLine();
-                    //If there is an error close the connection
-                    if (line == null) {
-                        socket.close();
-                        //If we have reached the end break out of the loop
-                    } else if (line.equals("")) {
-                        break;
-                    }
-                }
+                //if (parts.length == 3 && parts[0].equals("GET")) {
+                    filename = line;
+                    System.out.println("requesting file: " + filename);
+                //}
+//                //Go through the remaining parts of the HTTP request
+//                while (true) {
+//                    line = reader.readLine();
+//                    //If there is an error close the connection
+//                    if (line == null) {
+//                        socket.close();
+//                        //If we have reached the end break out of the loop
+//                    } else if (line.equals("")) {
+//                        break;
+//                    }
+//                }
                 writeFile(filename);
             }
             //Close connection
@@ -120,23 +143,12 @@ class MyTLSFileServerSession implements Runnable {
             //Tidy up
             out.close();
             reader.close();
-            System.out.println("Requested file found!");
+            System.out.println("Requested file sent!");
 
 
         } catch (Exception ex) {
             //The file does not exist so print error message
             System.out.println("Requested file " + filename + " not found :(");
-            //Send 404 error
-            error404();
-        }
-    }
-    //Sends a 404 error
-    private void error404() {
-        try {
-            writeln("HTTP/1.1 404 Not Found");
-            writeln("");
-        } catch (Exception ex) {
-            System.err.println(ex.getMessage());
         }
     }
 }
