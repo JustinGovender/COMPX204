@@ -75,9 +75,6 @@ class MyTLSFileServerSession implements Runnable {
                         break;
                     }
                 }
-                //Send the 200 status message
-                writeln("HTTP/1.1 200 OK");
-                writeln("");
                 writeFile(filename);
             }
             //Close connection
@@ -119,8 +116,6 @@ class MyTLSFileServerSession implements Runnable {
                 out.flush();
                 //Read in the next chunk
                 length = reader.read(buffer);
-                //Optional sleep to test for slow connections
-                //sleep(1000);
             }
             //Tidy up
             out.close();
@@ -140,7 +135,6 @@ class MyTLSFileServerSession implements Runnable {
         try {
             writeln("HTTP/1.1 404 Not Found");
             writeln("");
-
         } catch (Exception ex) {
             System.err.println(ex.getMessage());
         }

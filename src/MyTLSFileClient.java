@@ -1,9 +1,7 @@
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+
+import java.io.*;
+import java.net.*;
+
 
 public class MyTLSFileClient {
 
@@ -11,44 +9,77 @@ public class MyTLSFileClient {
     //Main ##########################################
     public static void main(String[] args) {
         //Check args
-        if (args.length != 4) {
-            System.out.println("Usage: <server_ip> <server_port> <filename> <output_filename>");
+        if (args.length != 3) {
+            System.out.println("Usage: <server_hostname> <server_port> <filename>");
             System.exit(0);
         }
-        //Create client
-        MyTLSFileClient client = new MyTLSFileClient(args[0], Integer.parseInt(args[1]), args[3]);
-        //Get file from server
-        client.GetFile(args[2]);
+        try{
+            //Create socket
+            Socket socket = new Socket(args[0], Integer.parseInt(args[1]));
+            //Create client
+            MyTLSFileClient client = new MyTLSFileClient(socket);
+            //Get file from server
+            client.GetFile(args[2]);
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
     }
 
     //Datafields ##########################################
+    private BufferedOutputStream serverWriter;
+    private BufferedReader serverReader;
     private FileOutputStream writer;
-    private DatagramSocket socket;
-    private InetSocketAddress serverAddress;
+    private InputStream reader;
+    private Socket socket;
     private final String pathName = "/Users/justin/Desktop/";
-    private byte currentBlockSeq = 1;
-    private DatagramPacket data;
-    private final int TIMEOUT = 1000;
 
     //Constructor #########################################
-    public MyTLSFileClient(String serverIp, int serverPort, String outFile) {
-        try {
-            socket = new DatagramSocket();
-            serverAddress = new InetSocketAddress(InetAddress.getByName(serverIp), serverPort);
-            writer = new FileOutputStream(pathName + outFile);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+    public MyTLSFileClient(Socket s) throws IOException{
+        socket = s;
+        serverWriter = new BufferedOutputStream(socket.getOutputStream());
+        serverReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
     //Methods #############################################
-    public void GetFile(String filename) {
-        try {
+    private void GetFile(String filename) throws IOException {
+        //Declare objects
+        File file = new File(pathName + "_" + filename);
+        writer = new FileOutputStream(file);
+        reader = socket.getInputStream();
+        String line;
+        byte[] buffer = new byte[16384];//16KiB
+        int length = 0;
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        //Send HTTP Request to server
+        writeln("GET /" +filename+  " HTTP/1.1");
+        writeln("");
+
+        //Read a chunk of the file
+        length = reader.read(buffer);
+        //While not at the end of the file...
+        while (length != -1) {
+            writer.write(buffer, 0, length);
+            writer.flush();
+            //Read in the next chunk
+            length = reader.read(buffer);
         }
+        //Tidy up
+        reader.close();
+        writer.close();
+        System.out.println("Requested file found!");
+
+    }
+
+    //Sends a string to the server
+    private void writeln(String s) throws IOException {
+        //Adds new line characters necessary for HTTP protocol
+        String line = (s + "\r\n");
+        //Send as a byte stream
+        byte[] array = line.getBytes();
+        for (byte b : array) {
+            serverWriter.write(b);
+        }
+        serverWriter.flush();
     }
 
 
